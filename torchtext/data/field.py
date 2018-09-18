@@ -277,8 +277,8 @@ class Field(RawField):
                              "input data is not a tuple of "
                              "(data batch, batch lengths).")
         if isinstance(arr, tuple):
-            arr, lengths = arr
-            lengths = torch.tensor(lengths, dtype=self.dtype, device=device)
+            arr, lengths_l = arr
+            lengths = torch.tensor(lengths_l, dtype=self.dtype, device=device)
 
         if self.use_vocab:
             if self.sequential:
@@ -287,7 +287,10 @@ class Field(RawField):
                 arr = [self.vocab.stoi[x] for x in arr]
 
             if self.postprocessing is not None:
-                arr = self.postprocessing(arr, self.vocab)
+                if self.include_lengths:
+                    arr = self.postprocessing(arr, self.vocab, lengths_l)
+                else:
+                    arr = self.postprocessing(arr, self.vocab)
         else:
             if self.dtype not in self.dtypes:
                 raise ValueError(
@@ -303,7 +306,10 @@ class Field(RawField):
                 arr = [numericalization_func(x) if isinstance(x, six.string_types)
                        else x for x in arr]
             if self.postprocessing is not None:
-                arr = self.postprocessing(arr, None)
+                if self.include_lengths:
+                    arr = self.postprocessing(arr, None, lengths_l)
+                else:
+                    arr = self.postprocessing(arr, None)
 
         var = torch.tensor(arr, dtype=self.dtype, device=device)
 
